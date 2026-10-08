@@ -1,8 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import { initialTransactions } from '@/data/transactions'
-
 import {
   createCategory as createCategoryRecord,
   deleteCategory as deleteCategoryRecord,
@@ -25,11 +23,16 @@ import {
   updateProduct as updateProductRecord,
 } from '@/services/productService'
 
+import {
+  createTransaction,
+  fetchTransactions,
+} from '@/services/transactionService'
+
 export const useInventoryStore = defineStore('inventory', () => {
   const products = ref([])
   const categories = ref([])
   const suppliers = ref([])
-  const transactions = ref([...initialTransactions])
+  const transactions = ref([])
 
   //categories
   async function loadCategories() {
@@ -190,53 +193,20 @@ export const useInventoryStore = defineStore('inventory', () => {
   }
 
 
-  function recordTransaction(transactionData) {
-    const product = products.value.find(
-      (item) => item.id === transactionData.productId,
+  //transactions
+  async function loadTransactions() {
+    transactions.value = await fetchTransactions()
+  }
+
+  async function recordTransaction(transactionData) {
+    const { transaction, product } = await createTransaction(transactionData)
+
+    const productIndex = products.value.findIndex(
+      (item) => item.id === product.id,
     )
 
-    if (!product) {
-      throw new Error('The selected product could not be found.')
-    }
-
-    const quantity = Number(transactionData.quantity)
-
-    if (!Number.isInteger(quantity) || quantity <= 0) {
-      throw new Error('Quantity must be a positive whole number.')
-    }
-
-    if (
-      transactionData.type === 'stock-out' &&
-      quantity > product.stock
-    ) {
-      throw new Error(
-        `Only ${product.stock} units are available for stock-out.`,
-      )
-    }
-
-    if (transactionData.type === 'stock-in') {
-      product.stock += quantity
-    } else if (transactionData.type === 'stock-out') {
-      product.stock -= quantity
-    } else {
-      throw new Error('Invalid transaction type.')
-    }
-
-    const nextId =
-      Math.max(
-        ...transactions.value.map((transaction) => transaction.id),
-        0,
-      ) + 1
-
-    const transaction = {
-      id: nextId,
-      reference: `TXN-2026-${String(nextId).padStart(4, '0')}`,
-      productId: product.id,
-      type: transactionData.type,
-      quantity,
-      note: transactionData.note.trim(),
-      performedBy: 'Admin User',
-      createdAt: new Date().toISOString(),
+    if (productIndex !== -1) {
+      products.value[productIndex] = product
     }
 
     transactions.value.unshift(transaction)
@@ -261,6 +231,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     addProduct,
     editProduct,
     removeProduct,
+    loadTransactions,
     recordTransaction,
   }
 })

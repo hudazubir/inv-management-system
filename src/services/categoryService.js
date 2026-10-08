@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { api } from './api'
 
 function mapCategory(row) {
   return {
@@ -9,53 +9,34 @@ function mapCategory(row) {
   }
 }
 
-export async function fetchCategories() {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id, name, description, created_at')
-    .order('name')
+function toPayload(category) {
+  return {
+    name: category.name,
+    description: category.description,
+  }
+}
 
-  if (error) throw error
+export async function fetchCategories() {
+  const { data } = await api.get('/categories')
 
   return data.map(mapCategory)
 }
 
 export async function createCategory(category) {
-  const { data, error } = await supabase
-    .from('categories')
-    .insert({
-      name: category.name,
-      description: category.description,
-    })
-    .select('id, name, description, created_at')
-    .single()
-
-  if (error) throw error
+  const { data } = await api.post('/categories', toPayload(category))
 
   return mapCategory(data)
 }
 
 export async function updateCategory(category) {
-  const { data, error } = await supabase
-    .from('categories')
-    .update({
-      name: category.name,
-      description: category.description,
-    })
-    .eq('id', category.id)
-    .select('id, name, description, created_at')
-    .single()
-
-  if (error) throw error
+  const { data } = await api.put(
+    `/categories/${category.id}`,
+    toPayload(category),
+  )
 
   return mapCategory(data)
 }
 
 export async function deleteCategory(categoryId) {
-  const { error } = await supabase
-    .from('categories')
-    .delete()
-    .eq('id', categoryId)
-
-  if (error) throw error
+  await api.delete(`/categories/${categoryId}`)
 }

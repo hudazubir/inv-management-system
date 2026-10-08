@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-vue-next'
 
@@ -27,9 +27,20 @@ function closeTransactionForm() {
   isTransactionFormOpen.value = false
 }
 
-function saveTransaction(transactionData) {
+onMounted(async () => {
   try {
-    inventoryStore.recordTransaction(transactionData)
+    await Promise.all([
+      inventoryStore.loadProducts(),
+      inventoryStore.loadTransactions(),
+    ])
+  } catch (error) {
+    window.alert(error.message)
+  }
+})
+
+async function saveTransaction(transactionData) {
+  try {
+    await inventoryStore.recordTransaction(transactionData)
     closeTransactionForm()
   } catch (error) {
     window.alert(error.message)

@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { api } from './api'
 
 function mapSupplier(row) {
   return {
@@ -12,85 +12,38 @@ function mapSupplier(row) {
   }
 }
 
-export async function fetchSuppliers() {
-  const { data, error } = await supabase
-    .from('suppliers')
-    .select(`
-      id,
-      company_name,
-      contact_name,
-      email,
-      phone,
-      address,
-      status
-    `)
-    .order('company_name')
+function toPayload(supplier) {
+  return {
+    company_name: supplier.companyName,
+    contact_name: supplier.contactName,
+    email: supplier.email,
+    phone: supplier.phone,
+    address: supplier.address,
+    status: supplier.status,
+  }
+}
 
-  if (error) throw error
+export async function fetchSuppliers() {
+  const { data } = await api.get('/suppliers')
 
   return data.map(mapSupplier)
 }
 
 export async function createSupplier(supplier) {
-  const { data, error } = await supabase
-    .from('suppliers')
-    .insert({
-      company_name: supplier.companyName,
-      contact_name: supplier.contactName,
-      email: supplier.email,
-      phone: supplier.phone,
-      address: supplier.address,
-      status: supplier.status,
-    })
-    .select(`
-      id,
-      company_name,
-      contact_name,
-      email,
-      phone,
-      address,
-      status
-    `)
-    .single()
-
-  if (error) throw error
+  const { data } = await api.post('/suppliers', toPayload(supplier))
 
   return mapSupplier(data)
 }
 
 export async function updateSupplier(supplier) {
-  const { data, error } = await supabase
-    .from('suppliers')
-    .update({
-      company_name: supplier.companyName,
-      contact_name: supplier.contactName,
-      email: supplier.email,
-      phone: supplier.phone,
-      address: supplier.address,
-      status: supplier.status,
-    })
-    .eq('id', supplier.id)
-    .select(`
-      id,
-      company_name,
-      contact_name,
-      email,
-      phone,
-      address,
-      status
-    `)
-    .single()
-
-  if (error) throw error
+  const { data } = await api.put(
+    `/suppliers/${supplier.id}`,
+    toPayload(supplier),
+  )
 
   return mapSupplier(data)
 }
 
 export async function deleteSupplier(supplierId) {
-  const { error } = await supabase
-    .from('suppliers')
-    .delete()
-    .eq('id', supplierId)
-
-  if (error) throw error
+  await api.delete(`/suppliers/${supplierId}`)
 }
